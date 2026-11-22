@@ -61,8 +61,11 @@ Renovate merges the PR itself instead of handing GitHub's auto-merge the job.
 A config carrying `"platformAutomerge": false` next to `"automerge": true` is
 an automerging config.
 
-The cost is real and is paid deliberately: someone presses merge. Bring the
-number of presses down with **grouping and scheduling**, never with automerge:
+The cost is real and is paid deliberately: someone reads the bump, then
+presses merge — the user, or a session clearing the queue
+([below](#clearing-the-pr-queue)). A session merging on green CI alone is
+automerge under another name. Bring the number of presses down with
+**grouping and scheduling**, never with automerge:
 
 - group patch and minor updates per ecosystem into one PR; keep every major
   on its own, because that one needs the release notes read;
@@ -142,9 +145,19 @@ failing PRs above are the real signal:
 ## Clearing the PR queue
 
 **Sort the queue with a look, not an investigation**: each open bot PR, its
-CI status and its update type. A PR that is green and needs no code change
-goes on a list of PRs ready to merge, which the user merges — never the
-session (see [Never automerge](#never-automerge)).
+CI status and its update type.
+
+**A green PR that needs no code change is read, then merged by the
+session.** Read the release notes or changelog across the whole range, from
+the old version to the new one, and check the diff moves only what the PR
+announces — no package appearing in a lockfile from nowhere. Leave it unmerged
+and tell the user what was seen when something looks off: a new dependency or
+install script, a changed maintainer or source repository, a release with no
+notes or no matching upstream tag. Otherwise merge it, with every check green
+and none pending, by the repo's merge method — never `--admin` past branch
+protection, never `--auto`. One at a time: a merge often makes Renovate
+rebase the others, so re-read the next one's checks. Then bring the main
+checkout up to date, as after any merge.
 
 **A PR that needs examining gets a dedicated session**: CI red, or a major
 whose release notes announce a breaking change the code has to absorb. The
