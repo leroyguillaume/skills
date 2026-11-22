@@ -139,6 +139,26 @@ failing PRs above are the real signal:
 | Helm / Argo CD | a chart and its separately-sourced CRDs |
 | mise + dockerfile | a toolchain in `mise.toml` and its `FROM` image |
 
+## Clearing the PR queue
+
+**Sort the queue with a look, not an investigation**: each open bot PR, its
+CI status and its update type. A PR that is green and needs no code change
+goes on a list of PRs ready to merge, which the user merges — never the
+session (see [Never automerge](#never-automerge)).
+
+**A PR that needs examining gets a dedicated session**: CI red, or a major
+whose release notes announce a breaking change the code has to absorb. The
+session clearing the queue launches one per such PR — a visible session of
+its own inside herdr (`herdr-delegation`), a sub-agent otherwise — and does
+not dig into it itself, not even a quick read of the failing job's log. The
+investigation would fill the context that holds the queue, the fix needs its
+own branch, PR and CI round-trips that the user follows in that session, and
+several failing PRs move forward in parallel instead of one after the other.
+
+**One session per cause, not per PR.** Several PRs red for one lockstep
+family are a single topic ([previous section](#group-what-must-move-together)):
+one session, one grouped PR.
+
 ## Dependency dashboard on
 
 **The dashboard is on, always.** It is the only place that shows what
