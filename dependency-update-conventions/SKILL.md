@@ -141,7 +141,7 @@ failing PRs above are the real signal:
 
 ## Dependency dashboard on
 
-**`dependencyDashboard: true`, always.** It is the only place that shows what
+**The dashboard is on, always.** It is the only place that shows what
 Renovate decided *not* to open a PR for — rate-limited, blocked by a failed
 lookup, awaiting approval, deprecated datasource, explicitly ignored.
 
@@ -151,10 +151,13 @@ often. The dashboard is what turns that into a visible list.
 
 ```json
 {
-  "dependencyDashboard": true,
-  "dependencyDashboardTitle": "Dependency dashboard"
+  "dependencyDashboard": { "enabled": true, "title": "Dependency dashboard" }
 }
 ```
+
+It is an object: a bare `true` or a separate `dependencyDashboardTitle` is the
+deprecated form, which Renovate migrates on the fly and flags with
+`Config needs migrating` on every run.
 
 - **Automerge breaks the dashboard, which is the second reason not to use
   it.** Renovate writes the dashboard only on a pass that does not end in an
@@ -188,12 +191,30 @@ Baseline:
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "timezone": "Europe/Paris",
-  "dependencyDashboard": true,
+  "dependencyDashboard": { "enabled": true },
   "prConcurrentLimit": 5,
   "minimumReleaseAge": "3 days",
   "lockFileMaintenance": { "enabled": true }
 }
 ```
+
+- **Validate it with `renovate-config-validator --strict`, as a pre-commit
+  hook.** Renovate renames options between releases and keeps accepting the
+  old names, so a stale key never fails a run: it only logs
+  `Config needs migrating`, where nobody looks. `--strict` fails on it
+  instead, and when the `pre-commit` manager bumps the hook to a Renovate
+  release that renames a key, that bump's CI goes red; `--migrate` rewrites
+  the file into the current form. `--no-global` is not optional: given file
+  names, as the hook passes them, the validator checks them as self-hosted
+  global config and misses repo-config problems.
+
+  ```yaml
+  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: <latest tag SHA>  # frozen: <latest tag>
+    hooks:
+      - id: renovate-config-validator
+        args: [--strict, --no-global]
+  ```
 
 - **Lock file maintenance is on.** Renovate rewrites a lockfile only when a
   direct dependency moves, so without it a transitive dependency in
@@ -340,6 +361,8 @@ CI/CD variable (`gitlab-ci-conventions`).
 - Never add a `.github/dependabot.yaml`, and never leave Dependabot security
   updates on beside Renovate.
 - Never turn the dependency dashboard off.
+- Never commit a Renovate config without `renovate-config-validator
+  --strict` passing on it.
 - Never add a custom manager without a `description` quoting the line it
   matches, and never merge one without a dry run.
 - Never leave the `pre-commit` manager off in a repo with a
