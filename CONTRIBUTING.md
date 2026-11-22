@@ -37,7 +37,9 @@ their checksums in [mise.lock](mise.lock):
   [Taskfile.yml](Taskfile.yml); `task --list` shows them.
 
 pre-commit builds the `actionlint` hook from source with the Go on `PATH`, and
-downloads a toolchain of its own when there is none.
+downloads a toolchain of its own when there is none. It installs the
+`renovate-config-validator` hook from npm the same way, with the Node on
+`PATH` or one it downloads.
 
 From a fresh clone:
 
@@ -166,6 +168,7 @@ most are formatters or checks that name the file to fix. These need more:
 | `yamllint` | YAML style, per [.yamllint.yaml](.yamllint.yaml), with `--strict` so warning-level rules fail too | Fix the finding; block style only, no `---` opening a file |
 | `actionlint` | Workflow files are valid | Fix the expression or key it names |
 | `skill-validator` | Skill structure, relative links, content, contamination, with the `skill-validator` mise installs | See [Running the tests](#running-the-tests) |
+| `renovate-config-validator` | `renovate.json` is valid repo config, with `--strict` so a deprecated option that Renovate would only migrate on the fly fails too | `npx --package renovate -- renovate-config-validator --migrate renovate.json` rewrites it into the current form |
 | `mise-fmt` | `mise.toml` is formatted, with the `mise` on `PATH` | Re-run: it rewrites the file |
 | `no-co-authors` (`commit-msg` stage) | No `Co-Authored-By:` trailer or `Generated with` line in the commit message. Runs on `git commit` only: `pre-commit run --all-files`, and so CI, skips it | Rewrite the message; a commit has one author |
 
@@ -197,7 +200,9 @@ Renovate keeps every pin current: the action SHA pins, the pre-commit hook
 revisions, and the tool versions in `mise.toml` and `mise.lock`. Pins are SHAs
 and tags can move, so a bot bumps them rather than a person remembering to;
 grouping folds the minor and patch bumps into one pull request per ecosystem,
-each major gets its own, and nothing is automerged.
+each major gets its own, and nothing is automerged. A weekly lock file
+maintenance pull request refreshes `mise.lock` too, so the entries no direct
+bump touches still move.
 
 ## Submitting a change
 

@@ -6,6 +6,7 @@
   "dependencyDashboard": { "enabled": true, "title": "Dependency dashboard" },
   "prConcurrentLimit": 5,
   "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": { "enabled": true },
   "pre-commit": { "enabled": true },
   "packageRules": [
     {

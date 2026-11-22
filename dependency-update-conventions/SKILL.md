@@ -213,7 +213,9 @@ Baseline:
     rev: <latest tag SHA>  # frozen: <latest tag>
     hooks:
       - id: renovate-config-validator
-        args: [--strict, --no-global]
+        args:
+          - --strict
+          - --no-global
   ```
 
 - **Lock file maintenance is on.** Renovate rewrites a lockfile only when a
