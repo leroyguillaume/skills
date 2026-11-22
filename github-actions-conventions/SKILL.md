@@ -113,7 +113,7 @@ branch protection.
   `-`. For a stable tag, pass `--notes-start-tag` with the previous stable
   tag.
 - On a public repository, `manifest` attests the image it tagged, and
-  `release` attests and uploads its files and SBOM
+  `release` attests and uploads its files, SBOM and attestation bundle
   (`release-supply-chain-conventions`).
 
 ## Caches

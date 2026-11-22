@@ -8,7 +8,7 @@ description: >-
   an SBOM generator, `pypa/gh-action-pypi-publish`, `npm publish` or
   `cargo publish` to a workflow; documenting how to verify a download; user
   asks about provenance, attestations, SBOMs, trusted publishing, code
-  signing or notarization.
+  signing, notarization, or Scorecard's Signed-Releases check.
   SKIP when: the repository is private or publishes nothing; the repo is on
   GitLab (`gitlab-ci-conventions`).
 ---
@@ -54,10 +54,39 @@ workflows call `actions/attest` directly.
 
 ```yaml
       - name: attest the release files
+        id: attest
         uses: actions/attest@<40-char-sha>  # vX.Y.Z
         with:
           subject-path: dist/*
 ```
+
+### The attestation bundle ships with the release
+
+The attestation API is invisible to anyone who only looks at the release:
+Scorecard's Signed-Releases check reads the files attached to the last five
+releases, and finds a signature only by its extension (`.asc`, `.minisig`,
+`.sig`, `.sign`, `.sigstore`, `.sigstore.json`). So the release also attaches
+the Sigstore bundle `actions/attest` writes to its `bundle-path` output:
+
+```yaml
+      - name: name the attestation bundle after the release
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$BUNDLE" "<project>-<version>.sigstore.json"
+```
+
+`gh release create` uploads it beside the files and the SBOM.
+
+- **One attest step for the release files, one bundle, named after the
+  release**: `<project>-<version>.sigstore.json`, like the SBOM. A step
+  given several subjects signs one statement listing them all, so the
+  bundle verifies each of them; a name taken from one file would claim it
+  covers that file alone, and a step per file adds signatures without
+  adding a guarantee.
+- **`.sigstore.json`, because that is what it is.** Never `.intoto.jsonl`,
+  the extension Scorecard counts as provenance: the file is a Sigstore
+  bundle, not an in-toto JSON Lines file, and a name chosen for the score
+  lies to every other tool.
 
 ### Images
 
@@ -98,6 +127,17 @@ gh attestation verify oci://ghcr.io/<owner>/<repo>:<tag> --repo <owner>/<repo>
 
 `--repo`, never `--owner`: `--owner` accepts an attestation from any
 repository of that account, including one that never built this artifact.
+
+The bundle attached to the release checks a file without the attestation
+API, documented after the form above, never instead of it:
+
+```bash
+gh attestation verify <file> --bundle <project>-<version>.sigstore.json --repo <owner>/<repo>
+```
+
+With `--bundle`, `--repo` is compared with the name recorded at signing
+time, so it cannot tell a renamed repository, or a new one reusing the
+name, from the original; the API lookup can.
 
 ## Signing a binary
 
@@ -175,6 +215,8 @@ signs a provenance statement for the upload.
 - Never grant `id-token: write` beyond the job that attests or publishes,
   and never in a pull-request workflow.
 - Never attest a file and then modify it.
+- Never give the attestation bundle an extension other than
+  `.sigstore.json`.
 - Never verify with `--owner` in the documentation.
 - Never add notarisation or Authenticode unasked.
 - Never store a registry API token when the registry offers trusted
