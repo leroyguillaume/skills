@@ -195,6 +195,16 @@ clean fetch, and a stale cache is worse than none.
   CPU work.
 - **Skip**: a cache wrapped around a fast download just because you can.
   Measure before adding one. (The Trivy DB is the exception, see above.)
+- **Only the default branch saves.** Every other pipeline — change
+  proposals, tags — restores the default branch's cache and saves nothing. A
+  proposal's cache serves only its own reruns, yet it shares the project's
+  cache quota: a few dependency-bot PRs each saving gigabytes of layers evict
+  the one cache every proposal reads, and each pays the export time for it.
+- **Measure a cache that doesn't help before tuning it**: hit or miss per
+  job, what each run saved, and the quota. The usual causes are eviction
+  (quota or inactivity), a default-branch run that never finished saving
+  (cancelled by a newer push, so the next one saves), and a dependency change
+  the default branch hasn't built yet, which no cache can cover.
 
 ## Multi-arch builds on native runners
 

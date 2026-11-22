@@ -96,8 +96,18 @@ branch protection.
   `trivy image` on the loaded image, then the same build again with a push
   by digest. That second build is a full cache hit, so the pushed layers are
   the ones that were scanned.
-- Layer cache: `type=gha,scope=<arch>`. An unscoped `type=gha` cache is
-  shared, so the two arch jobs overwrite each other.
+- Layer cache: `type=gha,scope=<target>-<arch>`. An unscoped `type=gha`
+  cache is shared, so the two arch jobs overwrite each other. `cache-from`
+  always; `cache-to` from the default branch only, with `mode=max`, since
+  `mode=min` drops the intermediate stages and with them the `cargo chef
+  cook` layer:
+  ```yaml
+  cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform.arch }}
+  cache-to: >-
+    ${{ github.ref == 'refs/heads/main'
+    && format('type=gha,mode=max,scope={0}-{1}', matrix.target, matrix.platform.arch)
+    || '' }}
+  ```
 - `release` calls `build` through `workflow_call` with `push: true`, then
   `gh release create "$TAG" --generate-notes` gated on the tag containing no
   `-`. For a stable tag, pass `--notes-start-tag` with the previous stable
@@ -105,6 +115,22 @@ branch protection.
 - On a public repository, `manifest` attests the image it tagged, and
   `release` attests and uploads its files and SBOM
   (`release-supply-chain-conventions`).
+
+## Caches
+
+What to cache and who saves it is `ci-conventions`. On GitHub:
+
+- **A run restores its own ref's caches and the default branch's, nothing
+  else.** A PR can't read another PR's, and a tag run reads only `main`'s.
+- `Swatinem/rust-cache` with `save-if: ${{ github.ref == 'refs/heads/main' }}`;
+  without it every PR saves its own `target/`, hundreds of MB each.
+- The repository has a **10 GB quota with least-recently-used eviction**, and
+  evicts any entry unused for 7 days (the retention setting). Changing either
+  is a repository setting, so it waits for the user's yes.
+- Diagnose with `gh api repos/{owner}/{repo}/actions/cache/usage` (total
+  against the quota), `gh cache list --ref <ref>` (what a ref saved), and the
+  run logs: rust-cache's `full match: true|false`, buildx's `CACHED` steps
+  and `exporting cache` time.
 
 ## `docs` and GitHub Pages
 
