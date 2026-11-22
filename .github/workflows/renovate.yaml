@@ -49,4 +49,7 @@ jobs:
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_DRY_RUN: ${{ inputs.dryRun && 'full' || '' }}
+          # Updating mise.lock runs `mise lock`; without this Renovate blocks
+          # every mise operation and neither mise.toml nor mise.lock moves.
+          RENOVATE_ALLOWED_UNSAFE_EXECUTIONS: mise
           LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
