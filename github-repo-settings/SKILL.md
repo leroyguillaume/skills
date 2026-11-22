@@ -2,10 +2,13 @@
 name: github-repo-settings
 description: >-
   GitHub repo settings via `gh`: labels, merge methods, branch deletion,
-  Pages, a public repo's security features.
+  the default branch's ruleset, Pages, a public repo's security features.
   TRIGGER when: `.github/release.yaml` is created or its labels change; user
   asks to sync labels or create/delete a single label, change merge methods,
-  toggle head-branch deletion, or enable GitHub Pages; a repo gains an
+  toggle head-branch deletion, or enable GitHub Pages; a repo's CI first runs
+  on a PR; a job of the `quality` or `security` workflow is added, renamed or
+  removed; user asks about branch protection, rulesets or required checks, or
+  Scorecard's Branch-Protection check; a repo gains an
   `actions/deploy-pages` workflow; a Pages deploy fails because Pages is off;
   a repository is or becomes public, or gains a `SECURITY.md`; user asks
   about secret scanning, push protection, Dependabot alerts or security
@@ -128,6 +131,102 @@ gh repo view --json deleteBranchOnMerge   # verify -> {"deleteBranchOnMerge":tru
 Once on, merging a PR deletes its head branch automatically (the branch is still
 recoverable from the PR's "Restore branch" button for a while). Pass
 `--delete-branch-on-merge=false` to turn it back off.
+
+## Protect the default branch with a ruleset
+
+Every repository with CI protects its default branch with a **ruleset**:
+no deletion, no force-push, changes through a pull request, and the
+unfiltered CI jobs required to merge. A ruleset, never a classic branch
+protection rule: `ossf/scorecard-action`'s `GITHUB_TOKEN` can read a
+ruleset but not a classic rule's details, which need an admin token, so
+Scorecard's Branch-Protection check cannot grade a classic rule.
+
+Set it **once the CI has run on a first pull request**, so the required
+checks carry the names the runs actually report. A required check that
+never reports blocks every pull request.
+
+Check first, the answer decides between create and update:
+
+```bash
+gh api repos/{owner}/{repo}/rulesets --jq '.[] | {id, name, target}'
+```
+
+The ruleset, with the repository's own checks, in a `ruleset.json` outside
+the repository:
+
+```json
+{
+  "name": "default branch",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+  "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}],
+  "rules": [
+    {"type": "deletion"},
+    {"type": "non_fast_forward"},
+    {"type": "pull_request", "parameters": {
+      "required_approving_review_count": 0,
+      "dismiss_stale_reviews_on_push": true,
+      "require_code_owner_review": false,
+      "require_last_push_approval": false,
+      "required_review_thread_resolution": false
+    }},
+    {"type": "required_status_checks", "parameters": {
+      "strict_required_status_checks_policy": false,
+      "required_status_checks": [
+        {"context": "lint", "integration_id": 15368},
+        {"context": "test", "integration_id": 15368}
+      ]
+    }}
+  ]
+}
+```
+
+No branch-targeting ruleset yet; create it:
+
+```bash
+gh api -X POST repos/{owner}/{repo}/rulesets --input ruleset.json
+```
+
+One exists; update it rather than adding a second:
+
+```bash
+gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input ruleset.json
+```
+
+Verify: the rules that apply to the default branch, required checks
+included.
+
+```bash
+gh api repos/{owner}/{repo}/rules/branches/<default-branch>
+```
+
+Notes:
+
+- **Required checks: every job of `quality` and, when it exists,
+  `security`**, the workflows never filtered by `paths`
+  (`github-actions-conventions`). A job skipped on pull requests by an `if:`
+  stays out, for the same reason as a filtered one. `context` is the job's
+  name as `gh pr checks <number>` prints it, one entry per matrix leg
+  (`integration (latest)`); `integration_id` 15368 is GitHub Actions, so a
+  status from anything else cannot satisfy it.
+- **Renaming, adding or removing a job of `quality` or `security` updates
+  the ruleset in the same change**: once that pull request's CI has
+  reported the new names, before it merges. A renamed or removed job
+  otherwise blocks every pull request, its own included.
+- **0 approvals**: a lone maintainer cannot approve their own pull request.
+- **The admin bypass is there for `scripts/release.sh`**
+  (`release-script-conventions`), whose push lands the release commit
+  straight on the default branch, which the `pull_request` rule rejects. A
+  repository without that script sets `"bypass_actors": []`. Scorecard's
+  Branch-Protection check docks points for the bypass, a price accepted for
+  a release flow that stays one command.
+- `strict_required_status_checks_policy` stays `false`: requiring the branch
+  to be up to date makes every open pull request catch up and re-run its CI
+  after each merge.
+- A private repository on GitHub Free does not enforce rulesets, which need
+  Pro, Team or Enterprise Cloud there. Say so rather than making the
+  repository public.
 
 ## Enable GitHub Pages in GitHub Actions mode
 

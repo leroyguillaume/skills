@@ -82,8 +82,8 @@ Path filters do not apply to tag, `schedule`, `workflow_dispatch` or
 
 **A `paths`-filtered workflow must never be a required status check.** When
 the filter skips it, the check never reports and the PR waits on it forever.
-Only `quality` and, when it exists, `security` (never filtered) go into
-branch protection.
+Only the jobs of `quality` and, when it exists, `security` (never filtered)
+are required, in the default branch's ruleset (`github-repo-settings`).
 
 ## `build` and `release`
 
