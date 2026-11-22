@@ -97,7 +97,8 @@ UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
 - **Container images are the one pin outside mise.** A `Dockerfile` builds
   from its `FROM` tag (`rust:<version>`, `python:<version>`), which mise does
   not read: keep that tag on the version `mise.toml` pins, and bump both in
-  the same PR.
+  the same PR — a Renovate group spanning both managers does it
+  (`dependency-update-conventions`).
 
 ### `mise.lock`
 
@@ -189,8 +190,10 @@ quality:
 ## Dependency updates
 
 Renovate's `mise` manager bumps `mise.toml` and `mise.lock` together,
-toolchains included (`dependency-update-conventions`). It is on by default;
-a config with an `enabledManagers` list has to name it.
+toolchains included, once a self-hosted run allows it to execute `mise`
+(`allowedUnsafeExecutions`, see `dependency-update-conventions`); without
+that, it bumps neither. It is on by default; a config with an
+`enabledManagers` list has to name it.
 
 ## CONTRIBUTING
 

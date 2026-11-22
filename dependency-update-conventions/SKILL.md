@@ -38,7 +38,10 @@ in step and a second place for a bump to come from.
 **Pins stay pins.** The `github-actions` manager bumps a SHA-pinned `uses:`
 together with its trailing `# vX.Y.Z` comment, and the `pre-commit` manager a
 `rev: <sha>  # frozen: <tag>` line — but `pre-commit` is **off by default**
-and must be enabled, or the hook revisions silently stop moving.
+and must be enabled, or the hook revisions silently stop moving. It follows
+hooks hosted on GitHub, GitLab and Forgejo only, and bumps
+`additional_dependencies` only for a hook that declares `language: golang`,
+`node` or `python`; any other one is bumped by hand.
 
 ## Never automerge
 
@@ -103,6 +106,11 @@ than a package name. Put the lockstep rule **after** the patch/minor
 catch-all: when several `packageRules` match, the later one's `groupName`
 wins.
 
+**A group can span managers.** A toolchain pinned in `mise.toml` and in a
+`Dockerfile` `FROM` is seen by `mise` and by `dockerfile`, which open one PR
+each; both carry the same `depName` (`rust`, `python`, `node`), so group on
+`matchDepNames`, never on `matchManagers`.
+
 ```json
 {
   "packageRules": [
@@ -129,6 +137,7 @@ failing PRs above are the real signal:
 | npm | `@astrojs/*` with `astro`; `react` with `react-dom`; `@typescript-eslint/*` |
 | pip | `boto3` with `botocore` |
 | Helm / Argo CD | a chart and its separately-sourced CRDs |
+| mise + dockerfile | a toolchain in `mise.toml` and its `FROM` image |
 
 ## Dependency dashboard on
 
@@ -181,9 +190,16 @@ Baseline:
   "timezone": "Europe/Paris",
   "dependencyDashboard": true,
   "prConcurrentLimit": 5,
-  "minimumReleaseAge": "3 days"
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": { "enabled": true }
 }
 ```
+
+- **Lock file maintenance is on.** Renovate rewrites a lockfile only when a
+  direct dependency moves, so without it a transitive dependency in
+  `Cargo.lock`, `uv.lock` or `mise.lock` stays on the version it was first
+  locked at, CVE fixes included. It opens one weekly PR, reviewed like any
+  other.
 
 - **The baseline sets no label.** When the repo has `.github/release.yaml`,
   add `"labels": ["<changelog-category label>"]` so bot PRs land in the
@@ -239,6 +255,14 @@ this up":
   "pre-commit": { "enabled": true }
 }
 ```
+
+**A manager that sees the file can still skip an entry, silently.** `mise`
+reads its registry but not aqua's: it skips aqua packages of the `http` type
+(write `helm`, not `aqua:helm/helm`) and asdf or vfox plugin paths, and
+misreads an aqua `version_filter` until a `packageRules` entry sets
+`extractVersion` for that tool (`cli/(?<version>.+)` for
+`aqua:biomejs/biome`). Check that every pin shows up under the dashboard's
+detected dependencies.
 
 ### Custom datasources
 
@@ -297,6 +321,11 @@ things specific to Renovate:
 - **A `workflow_dispatch` `dryRun` input** wired to `RENOVATE_DRY_RUN`, and a
   `logLevel` choice input. This is what makes "dry-run a custom manager before
   merging it" a thing somebody can actually do, rather than advice.
+- **`RENOVATE_ALLOWED_UNSAFE_EXECUTIONS: mise`** in the job's `env` when the
+  repo has a `mise.lock`. Updating the lock runs `mise lock`, which Renovate
+  refuses by default and then blocks every mise operation: neither
+  `mise.toml` nor `mise.lock` moves, and only the log says why. It is a
+  global option — set in `renovate.json`, it is ignored.
 
 Schedule it (`cron`) rather than running it on push: dependency updates are
 not a property of a commit.
@@ -315,6 +344,8 @@ CI/CD variable (`gitlab-ci-conventions`).
   matches, and never merge one without a dry run.
 - Never leave the `pre-commit` manager off in a repo with a
   `.pre-commit-config.yaml`.
+- Never run Renovate on a repo with a `mise.lock` without `mise` in
+  `allowedUnsafeExecutions`.
 - Never take `platformAutomerge: false` for "automerge is off".
 - Never put `commitMessage*` at the top level and assume it applies — manager
   defaults win.
