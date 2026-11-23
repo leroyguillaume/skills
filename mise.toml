@@ -5,7 +5,7 @@ min_version = "2026.11.10"
 "github:groupbees/pollen" = "0.7.0"
 pre-commit = "4.7.0"
 # No Python code here: pre-commit builds its hook environments with it.
-python = "3.13.18"
+python = "3.15.2"
 task = "3.54.0"
 
 [settings]
