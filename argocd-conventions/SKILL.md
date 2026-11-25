@@ -118,7 +118,7 @@ separate knob, set in the app's values file. Same reasoning, same answer.)
 ### Passing values into jsonnet
 
 One `extVar` carrying a whole config object as JSON (`{{ toJson .config }}`),
-decoded as `jsonnet-conventions` says, rather than one extVar per key: the set
+decoded once with `std.parseJson`, rather than one extVar per key: the set
 of goTemplate expressions that can reach a rendered Application stays small
 enough to reproduce offline.
 
