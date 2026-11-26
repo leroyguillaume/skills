@@ -6,7 +6,7 @@ description: >-
   TRIGGER when: editing anything under `.github/workflows/` or
   `.github/actions/`, `.github/release.yaml`, or an `action.yaml`/`.yml`;
   setting up CI on GitHub; user asks about Actions, runners, SARIF, GitHub
-  Releases, Pages or OpenSSF Scorecard.
+  Releases, Pages, OpenSSF Scorecard or the coverage report.
   SKIP when: the repo is not on GitHub (`gitlab-ci-conventions`). Load
   `ci-conventions` alongside.
 ---
@@ -15,7 +15,8 @@ description: >-
 
 How the pipelines from `ci-conventions` are written on GitHub. One workflow
 file per canonical pipeline the repo needs: `.github/workflows/quality.yaml`,
-`build.yaml`, `security.yaml`, `chart.yaml`, `release.yaml`, `docs.yaml`.
+`coverage.yaml`, `build.yaml`, `security.yaml`, `chart.yaml`, `release.yaml`,
+`docs.yaml`.
 `ci-conventions` says which ones a repo has; a repo with no lockfile and no
 published image has no `security.yaml`. A public repository also has
 `scorecard.yaml` (below).
@@ -67,6 +68,7 @@ permissions.
 | Workflow | Triggers |
 | --- | --- |
 | `quality` | `push` to the default branch, `pull_request`, no `paths` |
+| `coverage` | `push` to the default branch, `pull_request`, no `paths` |
 | `build` | `push`/`pull_request` with `paths`, `workflow_dispatch` and `workflow_call` with `push` and `version` inputs |
 | `security` | `push` to the default branch, `pull_request`, `schedule`, `workflow_dispatch`, no `paths` |
 | `chart` | `push` of tags `chart-*`, `workflow_dispatch` |
@@ -84,6 +86,40 @@ Path filters do not apply to tag, `schedule`, `workflow_dispatch` or
 the filter skips it, the check never reports and the PR waits on it forever.
 Only the jobs of `quality` and, when it exists, `security` (never filtered)
 are required, in the default branch's ruleset (`github-repo-settings`).
+`coverage` is unfiltered but never required: it reports, it does not gate
+(`ci-conventions`).
+
+## `coverage`
+
+One job on `ubuntu-24.04`, `contents: read`, so it runs the same on a fork's
+pull request. After the checkout, `jdx/mise-action` and the language's build
+cache (`rust-cache` with its `save-if`, below):
+
+```yaml
+      - name: measure the coverage
+        run: task coverage
+
+      - name: write the summary to the job summary
+        run: |
+          {
+            echo '## Test coverage'
+            echo '```text'
+            task --silent coverage:summary
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: upload the HTML report
+        uses: actions/upload-artifact@<40-char-sha>  # vX.Y.Z
+        with:
+          name: coverage-html
+          path: <the language skill's HTML report directory>
+          if-no-files-found: error
+```
+
+- The summary goes in a `text` fence: the tools print aligned columns, which
+  Markdown would reflow.
+- `if-no-files-found: error`: a report path that drifted from the tool's
+  output otherwise uploads nothing, silently.
 
 ## `build` and `release`
 
@@ -352,7 +388,7 @@ The `actionlint` pre-commit hook, always, on a repo with workflows.
 
 - Never start a workflow file with `---`, and never quote `"on"`.
 - Never use a bare branch/tag action ref.
-- Never make a `paths`-filtered workflow a required check.
+- Never make a `paths`-filtered workflow, or `coverage`, a required check.
 - Never share one unscoped `type=gha` cache across architectures.
 - Never use `${{ github.workflow }}` in the concurrency group of a reusable
   workflow.

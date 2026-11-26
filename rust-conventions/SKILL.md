@@ -7,8 +7,8 @@ description: >-
   up a Rust CLI, server, async trait, mock or subscriber; a `cargo run`/`cargo
   test` needing env vars.
   SKIP when: no Rust is involved. Load `rust-http-conventions` alongside for
-  HTTP, `rust-build-conventions` for the toolchain pin, sqlx tests, `build.rs`
-  and cargo-chef.
+  HTTP, `rust-build-conventions` for the toolchain pin, sqlx tests, `build.rs`,
+  cargo-chef and coverage.
 ---
 
 # Rust conventions
@@ -220,7 +220,7 @@ description: >-
   code: allows added at bootstrap "because everyone disables those" are
   cargo-cult, and some will not even be in the group any more.
 - Toolchain pin (in `mise.toml`), `sqlx` database tests, `build.rs` for
-  `sqlx::migrate!` and `cargo-chef` Docker builds live in
+  `sqlx::migrate!`, `cargo-chef` Docker builds and test coverage live in
   `rust-build-conventions`; load it alongside for those.
 - Use `mockall` for test doubles. Define collaborators as traits, annotate
   them with `#[cfg_attr(test, mockall::automock)]` (or `mock!` when you

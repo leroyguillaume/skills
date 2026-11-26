@@ -209,7 +209,8 @@ Notes:
   stays out, for the same reason as a filtered one. `context` is the job's
   name as `gh pr checks <number>` prints it, one entry per matrix leg
   (`integration (latest)`); `integration_id` 15368 is GitHub Actions, so a
-  status from anything else cannot satisfy it.
+  status from anything else cannot satisfy it. `coverage` is never
+  required: it reports, it does not gate (`ci-conventions`).
 - **Renaming, adding or removing a job of `quality` or `security` updates
   the ruleset in the same change**: once that pull request's CI has
   reported the new names, before it merges. A renamed or removed job

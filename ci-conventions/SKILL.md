@@ -4,8 +4,9 @@ description: >-
   Platform-agnostic CI pipelines: quality gate, Trivy scans, path filters,
   caching, releases.
   TRIGGER when: creating or editing any CI definition (`.github/workflows/`,
-  `.gitlab-ci.yml`, `.gitlab/ci/`, …); setting up CI; user asks about
-  triggers, path filters, CVE scanning, CI caching or release automation.
+  `.gitlab-ci.yml`, `.gitlab/ci/`, …); setting up CI; adding a test suite;
+  user asks about triggers, path filters, CVE scanning, test coverage, CI
+  caching or release automation.
   SKIP when: no pipeline is involved. Load `github-actions-conventions` or
   `gitlab-ci-conventions` alongside.
 ---
@@ -28,6 +29,9 @@ skill says how each one maps onto files and triggers.
   a `Taskfile.yml` exists, it runs `task lint` and `task test` rather than
   the commands behind them (`mise-conventions`, `task-conventions`). This is the single
   quality gate. Don't scatter fmt/lint/test across ad-hoc pipelines.
+- **`coverage`**: when the repo has a test suite in any language but shell.
+  It measures the suite's coverage and reports it, on the same triggers as
+  `quality`; it is a report, not a gate (below).
 - **`build`**: when a `Dockerfile` exists. It builds the image, scans it, and
   **pushes only when asked**, meaning a manual run with a `push` input or the
   `release` pipeline. A plain push or change proposal builds and scans
@@ -146,6 +150,40 @@ The only pre-authorised exceptions are the ones `docker-conventions`
 `gitlab-ci-conventions` (yamllint `brackets` on a `!reference` line) and
 `sql-conventions` (`RF04`, `RF06`) list. Nothing else is.
 
+## Test coverage: measured and reported, not gated
+
+**Every test suite has its coverage measured in CI, whatever the language,
+except shell.** Shell tests drive other programs end to end, and the shell
+coverage tools (`kcov`, `bashcov`) are each tied to one platform or one
+shell. Configuration languages are out too: `terraform test` and chart tests
+assert on a plan or a render, with no lines to count.
+
+- **`task coverage`** runs the suite instrumented, prints the summary and
+  writes the detailed report; **`task coverage:summary`** prints the last
+  run's summary again, for CI (`task-conventions`). The language skill gives
+  both and names the tool (`rust-build-conventions`, `python-conventions`,
+  `frontend-conventions`); a language with no skill here uses its runner's own
+  (`go test -coverprofile`, `node --test --experimental-test-coverage`).
+- **The tool is pinned like the rest**: in `mise.toml` when it is a binary
+  of its own, in the language's lockfile when the test runner loads it as a
+  plugin (a pytest plugin, a Vitest provider), at the runner's version.
+- **Readable without leaving the run**: the summary on the run's page (the
+  GitHub job summary, GitLab's coverage figure and diff annotations) and the
+  HTML report as a downloadable artefact. The platform skill says how.
+- **One run, on Linux.** A test matrix across OSes stays in `quality`;
+  coverage measures the suite once.
+- **Not a required check.** With no threshold, it fails only when a test
+  fails, which `quality` already blocks on, or when the instrumentation
+  breaks, which is no reason to hold a merge. Hence its own pipeline,
+  outside `quality`, and never path-filtered.
+- **No threshold unless the user asks for one.** A number picked for them
+  gets met with tests written for the number. When they ask, it is the
+  tool's own fail-under option, and the job then gates: it moves into
+  `quality` and is required like the rest.
+- **No third-party service** (Codecov, Coveralls, …) unless the user asks:
+  it needs a token or an app with access to the repository, for a report
+  the platform already shows.
+
 ## Path filters: don't trigger for nothing
 
 - A pipeline triggered by a push or a change proposal only runs when a file
@@ -231,6 +269,8 @@ clean fetch, and a stale cache is worse than none.
   published image: `pre-commit` already scans everything it holds.
 - Never split the quality gate, and never path-filter `quality` or
   `security`.
+- Never make `coverage` a required check without a threshold, and never set
+  a threshold or a coverage service the user did not ask for.
 - Never let two runs of one pipeline overlap on a ref, and never exempt a
   publishing pipeline from cancellation.
 - Never create a release page for a pre-release tag, and never start a stable

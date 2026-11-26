@@ -4,7 +4,7 @@ description: >-
   Task (`Taskfile.yml`): the commands contributors and CI run.
   TRIGGER when: creating or editing `Taskfile.yml`/`.yaml` or an included
   Taskfile; scaffolding a project; adding a command contributors run (setup,
-  lint, test, build, release); a CI step running one; a `Makefile` or
+  lint, test, coverage, build, release); a CI step running one; a `Makefile` or
   `justfile` used as a task runner; user asks about Task or a task runner.
   SKIP when: pinning or installing tools (`mise-conventions`).
 ---
@@ -62,7 +62,9 @@ tasks:
 - **The standard names**: `setup` (project dependencies and `pre-commit
   install`, never the tools, which are `mise install`'s), `lint` (exactly
   `pre-commit run --all-files`, the gate CI runs), `test` (the whole suite),
-  then `build`, `run`, `docs` when the project has them, and `release` around
+  `coverage` and `coverage:summary` for a suite in any language but shell
+  (`ci-conventions`; the language skill gives their commands), then `build`,
+  `run`, `docs` when the project has them, and `release` around
   `scripts/release.sh` (`release-script-conventions`). A bare `task` lists
   them. Namespaces with `:` (`docs:build`) through `includes` when a
   component has a Taskfile of its own.

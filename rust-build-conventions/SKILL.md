@@ -2,13 +2,13 @@
 name: rust-build-conventions
 description: >-
   Rust build and test infrastructure: toolchain pin, sqlx database tests,
-  `build.rs`, cargo-chef.
+  `build.rs`, cargo-chef, test coverage.
   TRIGGER when: scaffolding a Rust project; pinning the Rust toolchain; a
   `rust-toolchain.toml` (or `rust-toolchain`) in the repo; editing a
   `build.rs`; calling `sqlx::migrate!` or writing a
   `#[sqlx::test]`; "relation does not exist" after adding a migration;
   building a Rust `Dockerfile` or touching `cargo chef`; CI red after a clippy
-  release.
+  release; measuring test coverage, `cargo llvm-cov` or `cargo tarpaulin`.
   SKIP when: no such file or test is involved (`rust-conventions`). Load
   `rust-conventions` alongside.
 ---
@@ -76,6 +76,35 @@ description: >-
   Never add `cargo-chef` to `Cargo.toml` (deps or dev-deps) and never invoke
   it in local development or CI outside the image build — it is purely a
   Docker layer-caching tool.
+
+- **Measure coverage with `cargo-llvm-cov`** (`ci-conventions`). It reads
+  rustc's own source-based instrumentation, so it runs on stable, on every
+  platform, and counts regions as well as lines; `cargo-tarpaulin` defaults
+  to a ptrace engine on Linux and wraps that same instrumentation elsewhere.
+  The registry lacks it, and it needs the `llvm-tools` component:
+  ```toml
+  [tools]
+  "aqua:taiki-e/cargo-llvm-cov" = "<latest>"
+  rust = { version = "<current stable release>", components = ["rustfmt", "clippy", "llvm-tools"], profile = "minimal" }
+  ```
+  ```yaml
+    coverage:
+      desc: Run the tests and measure their line and region coverage
+      cmds:
+        - cargo llvm-cov --workspace --all-targets --locked {{.CLI_ARGS}}
+        - cargo llvm-cov report --html
+
+    coverage:summary:
+      desc: Print the summary of the last coverage run
+      cmds:
+        - cargo llvm-cov report
+  ```
+  The HTML report lands in `target/llvm-cov/html/`. On GitLab, `coverage`
+  also writes `cargo llvm-cov report --cobertura --output-path
+  target/llvm-cov/cobertura.xml`, and the job's regex reads the `TOTAL`
+  line's line coverage: `/^TOTAL(?:\s+\S+){8}\s+(\d+(?:\.\d+)?)%/`.
+  Branch coverage (`--branch`) and doctests (`--doctests`) need nightly:
+  never add a nightly toolchain for them.
 
 **Never:**
 

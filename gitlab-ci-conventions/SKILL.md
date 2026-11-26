@@ -6,7 +6,8 @@ description: >-
   TRIGGER when: editing `.gitlab-ci.yml`, `.gitlab/ci/`,
   `.gitlab/changelog_config.yml` or a CI/CD component `templates/*.yml`;
   setting up CI on GitLab; user asks about GitLab CI rules, runners,
-  schedules, the vulnerability report, Releases or Pages.
+  schedules, the vulnerability report, the coverage report, Releases or
+  Pages.
   SKIP when: the repo is on GitHub (`github-actions-conventions`). Load
   `ci-conventions` alongside.
 ---
@@ -20,8 +21,9 @@ vary, so read them from the repo or ask. Never guess a runner tag.
 ## Layout and style
 
 - One `.gitlab-ci.yml`. Once it passes a couple of hundred lines, split it
-  into `.gitlab/ci/<pipeline>.yml` (`quality`, `build`, `security`, `chart`,
-  `release`, `docs`, each only when `ci-conventions` calls for it), pulled
+  into `.gitlab/ci/<pipeline>.yml` (`quality`, `coverage`, `build`,
+  `security`, `chart`, `release`, `docs`, each only when `ci-conventions`
+  calls for it), pulled
   in with `include: local:`.
 - Each canonical pipeline is a **set of jobs**, not a file. Name jobs in
   lowercase kebab-case after what they do (`pre-commit`, `test`,
@@ -116,6 +118,37 @@ include:
   so an MR pipeline never sees them. That is the whole point.
 - Restrict `CI_JOB_TOKEN` access to the projects that actually need it (the
   job token allowlist).
+
+## `coverage`
+
+One job, on the same `rules` as the test job:
+
+```yaml
+coverage:
+  image: ghcr.io/jdx/mise:<mise version>-debian
+  allow_failure: true
+  script:
+    - mise install --locked
+    - mise exec -- task coverage
+  coverage: <the language skill's regex>
+  artifacts:
+    expose_as: coverage report
+    paths:
+      - <the language skill's HTML report directory>/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: <the language skill's Cobertura file>
+```
+
+- **`allow_failure: true`** is how it stays out of the merge gate: GitLab
+  has no per-job required check, and *Pipelines must succeed* waits on every
+  job not allowed to fail (`ci-conventions` says why it does not gate).
+- **`coverage:`** reads the total from the job log into the MR widget and
+  the project's coverage history; the regex matches the line the tool prints.
+- **`coverage_report`** annotates the MR diff, line by line. It takes
+  Cobertura, so `task coverage` writes that format too, at the path the
+  language skill gives.
 
 ## `build`
 

@@ -105,8 +105,9 @@ tooling:
   suite that silently requires Docker is a contributor's lost afternoon.
 - **How to run the slow or optional ones**, and how they're excluded by
   default (a marker, a feature, an environment variable).
-- **Coverage**, only if the project actually enforces a threshold — the
-  command and the number. Don't document a coverage tool nobody gates on.
+- **Coverage**, when CI measures it (`ci-conventions`): `task coverage`,
+  where its HTML report lands, and the threshold only when the project has
+  one.
 - **What is expected of a new change**: tests for new behaviour, a regression
   test for a fix. Say it once, here.
 
@@ -162,6 +163,7 @@ this well:
 | Workflow | Purpose | Reproduce locally |
 | --- | --- | --- |
 | [`quality.yaml`](.github/workflows/quality.yaml) | quality gate | `pre-commit run --all-files` |
+| [`coverage.yaml`](.github/workflows/coverage.yaml) | test coverage report, not required | `task coverage` |
 | [`build.yaml`](.github/workflows/build.yaml) | image build and scan | `docker build .` |
 | [`security.yaml`](.github/workflows/security.yaml) | CVE scan of the code and the latest release | `trivy fs .` |
 | [`release.yaml`](.github/workflows/release.yaml) | image publish | — |

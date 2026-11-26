@@ -1,11 +1,11 @@
 ---
 name: frontend-conventions
 description: >-
-  Frontend code: TypeScript, React, Biome.
+  Frontend code: TypeScript, React, Biome, Vitest coverage.
   TRIGGER when: editing `.tsx`, `.ts` in a frontend app, or React components,
   hooks or pages; touching a frontend `package.json`, `tsconfig*.json`,
-  `biome.json`/`.jsonc` or lockfile; user asks about frontend tooling, React
-  or Biome.
+  `biome.json`/`.jsonc`, `vitest.config.*` or lockfile; measuring a front
+  end's test coverage; user asks about frontend tooling, React or Biome.
   SKIP when: server-side TS (Node, CDK, Pulumi), plain HTML
   (`web-layout-conventions`), or no frontend code.
 ---
@@ -57,6 +57,36 @@ description: >-
   Library (or the framework's first-party test runner). Test behaviour
   through the rendered output and user interactions, not implementation
   details.
+- Measure their coverage with **Vitest's `v8` provider** (`ci-conventions`):
+  V8's own counters, with no instrumentation pass over the source. Add
+  `@vitest/coverage-v8` as a dev dependency at the same version as Vitest,
+  so the lockfile pins both together; Renovate's monorepo grouping keeps
+  them in step. With the framework's own runner instead, its built-in coverage.
+
+  ```ts
+  coverage: {
+    provider: "v8",
+    include: ["src/**"],
+    reporter: ["text", ["text", { file: "summary.txt" }], "html"],
+  },
+  ```
+
+  ```yaml
+    coverage:
+      desc: Run the tests and measure their coverage
+      cmds:
+        - npx vitest run --coverage {{.CLI_ARGS}}
+
+    coverage:summary:
+      desc: Print the summary of the last coverage run
+      cmds:
+        - cat coverage/summary.txt
+  ```
+
+  The HTML report lands in `coverage/`, which is gitignored. On GitLab, add
+  the `cobertura` reporter (`coverage/cobertura-coverage.xml`); the job's
+  regex reads the `All files` row's line column:
+  `/^All files\s*\|(?:[^|]*\|){3}\s*(\d+(?:\.\d+)?)/`.
 
 **Never:**
 

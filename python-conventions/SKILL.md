@@ -1,11 +1,11 @@
 ---
 name: python-conventions
 description: >-
-  Python projects: uv, ruff, typer, pydantic, Pylance.
+  Python projects: uv, ruff, typer, pydantic, Pylance, test coverage.
   TRIGGER when: editing or creating `.py` files; touching `pyproject.toml`,
   `uv.lock` or `.python-version`; adding a Python dependency; setting up a
-  Python CLI, config layer or data model; user asks about Python tooling,
-  types or env vars.
+  Python CLI, config layer or data model; measuring test coverage; user asks
+  about Python tooling, types or env vars.
   SKIP when: no Python is involved. Load `python-async-conventions` alongside
   for asyncio loops.
 ---
@@ -53,6 +53,33 @@ description: >-
   Fix every reported error and warning before considering a change done.
   When pyright and ruff disagree on a stylistic point, prefer the change that
   satisfies both; never silence one to keep the other happy.
+- Measure test coverage with **coverage.py through `pytest-cov`**
+  (`ci-conventions`): coverage.py is the reference tool, and the plugin runs
+  it from the `pytest` call contributors already make, `pytest-xdist`
+  workers included. It is a dev dependency (`uv add --dev pytest-cov`), so
+  `uv.lock` pins it, not `mise.toml`. Branch coverage is free here, so on:
+
+  ```toml
+  [tool.coverage.run]
+  branch = true
+  source = ["<package>"]
+  ```
+
+  ```yaml
+    coverage:
+      desc: Run the tests and measure their line and branch coverage
+      cmds:
+        - uv run pytest --cov --cov-report=term --cov-report=html {{.CLI_ARGS}}
+
+    coverage:summary:
+      desc: Print the summary of the last coverage run
+      cmds:
+        - uv run coverage report
+  ```
+
+  The HTML report lands in `htmlcov/`; gitignore it with `.coverage` and
+  `coverage.xml`. On GitLab, add `--cov-report=xml` (Cobertura, in
+  `coverage.xml`); the job's regex is `/^TOTAL.*\s(\d+(?:\.\d+)?)%/`.
 - Build CLIs with `typer`, every option carrying its `envvar=...`, or use
   `pydantic-settings` for richer config models (`env_prefix="mytool_"` for a
   CLI). Precedence and variable names follow `config-conventions`.
