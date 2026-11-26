@@ -83,6 +83,14 @@ tool, never through another tab.
    `--wait` matches the first state observed after submission, so it cannot
    match the idle state the agent has not left yet.
 
+   The brief gives the agent the command that renames its tab once its PR
+   or MR is open. Herdr injects `HERDR_TAB_ID` into every pane it manages,
+   so the agent names its own tab without being told its id:
+
+   ```bash
+   herdr tab rename "$HERDR_TAB_ID" "fix-login-timeout (#123)"
+   ```
+
 6. **Under OpenCode, read the report** once it returns:
 
    ```bash
@@ -104,5 +112,5 @@ tool, never through another tab.
   `herdr-delegation` says to. Never close a pane on its own, never touch a
   tab, pane or agent it did not create, and never `herdr server stop`.
 - **Reopen it for a follow-up** with a new tab in the same worktree, as in
-  the launch, and `-- --model <model> --continue` to `herdr agent start`,
+  the launch, `--label` carrying the PR number when it has one, and `-- --model <model> --continue` to `herdr agent start`,
   or `--session <id>` in place of `--continue` under OpenCode.

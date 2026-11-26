@@ -70,6 +70,11 @@ hc see the agent as `env`.
    `hc wait <name>`. A `not_started` means read the screen before deciding: a
    resent brief may arrive twice.
 
+   The brief gives the agent the command that renames its tab once its PR
+   or MR is open, its terminal being `$HC_TERMINAL_ID`: take it from what
+   `hc --skill` documents for the name herdr-app shows. When it gives none,
+   the brief leaves the rename out.
+
 4. **Under OpenCode, read the report** once it returns:
 
    ```bash

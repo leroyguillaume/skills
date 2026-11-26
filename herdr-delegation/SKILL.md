@@ -144,6 +144,12 @@ written like a peer's.
    speaks to the main session: they read it in the tab and steer the agent
    from there, and the agent answers in the language it was addressed in.
 
+   The brief also has the agent rename its own tab once it opens its PR or
+   MR, appending the number in parentheses, `fix-login-timeout (#123)` on
+   GitHub or `fix-login-timeout (!123)` on GitLab, with the command its
+   skill gives: the user finds the tab of a PR at a glance, and the tab
+   stays the agent's, so no other tab is touched.
+
    The command's exit is the signal that the agent stopped: it returns on
    `blocked` too, and catches an agent that went idle without reporting.
 
@@ -162,9 +168,9 @@ written like a peer's.
   starting `[relay]`, as a background command that waits.
 - **A closed tab is reopened, not messaged.** Whether the user closed it or
   it closed at the merge (below), a follow-up handed to the main session
-  opens a new tab in the same worktree, resuming the last conversation held
-  there with the same `--model`, and the follow-up is typed in as its
-  brief. Under OpenCode, the session id is that of the most recent session
+  opens a new tab in the same worktree, named as the closed one was, PR
+  number included, resuming the last conversation held there with the same
+  `--model`, and the follow-up is typed in as its brief. Under OpenCode, the session id is that of the most recent session
   whose `directory` is the worktree in `opencode session list --format
   json`: worktrees of one repo share an OpenCode project, so `--continue`
   can resume another worktree's session.
