@@ -31,6 +31,17 @@ repos:
     hooks:
       - id: actionlint
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: c7d31dc612dffdd4d3b2f2b88b9660d3ab057ee8  # frozen: v1.33.1
+    hooks:
+      - id: zizmor
+        # A GH_TOKEN or GITHUB_TOKEN in the environment switches zizmor online,
+        # where it fails without network. `args` replaces the hook's own
+        # `--no-progress`, hence repeating it.
+        args:
+          - --offline
+          - --no-progress
+
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: a76b92851fc9eede9f9bc4073eb55202f34eb0df  # frozen: 0.39.0
     hooks:

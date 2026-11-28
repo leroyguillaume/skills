@@ -160,11 +160,15 @@ cache (`rust-cache` with its `save-if`, below):
   the ones that were scanned.
 - Layer cache: `type=gha,scope=<target>-<arch>`. An unscoped `type=gha`
   cache is shared, so the two arch jobs overwrite each other. `cache-from`
-  always; `cache-to` from the default branch only, with `mode=max`, since
-  `mode=min` drops the intermediate stages and with them the `cargo chef
-  cook` layer:
+  unless the run pushes, since a publishing run restores no cache; `cache-to`
+  from the default branch only, with `mode=max`, since `mode=min` drops the
+  intermediate stages and with them the `cargo chef cook` layer. The push
+  build still hits the scan build's layers, which the job's builder keeps:
   ```yaml
-  cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform.arch }}
+  cache-from: >-
+    ${{ !inputs.push
+    && format('type=gha,scope={0}-{1}', matrix.target, matrix.platform.arch)
+    || '' }}
   cache-to: >-
     ${{ github.ref == 'refs/heads/main'
     && format('type=gha,mode=max,scope={0}-{1}', matrix.target, matrix.platform.arch)
@@ -184,6 +188,11 @@ What to cache and who saves it is `ci-conventions`. On GitHub:
 
 - **A run restores its own ref's caches and the default branch's, nothing
   else.** A PR can't read another PR's, and a tag run reads only `main`'s.
+- **A publishing job restores no build cache** (`ci-conventions`): no `rust-cache`
+  or `actions/cache` in `release` or `chart`, no `cache-from` in a pushing
+  `build`. Not the workflow-level `cache-mode: none` zizmor suggests:
+  actionlint rejects that key
+  ([rhysd/actionlint#745](https://github.com/rhysd/actionlint/issues/745)).
 - `Swatinem/rust-cache` with `save-if: ${{ github.ref == 'refs/heads/main' }}`;
   without it every PR saves its own `target/`, hundreds of MB each.
 - The repository has a **10 GB quota with least-recently-used eviction**, and
@@ -408,7 +417,27 @@ concurrency:
 
 ## Lint
 
-The `actionlint` pre-commit hook, always, on a repo with workflows.
+Two pre-commit hooks, always, on a repo with workflows: `actionlint` checks
+that they are valid, zizmor that they follow the rules above (untrusted
+input, `persist-credentials`, permissions, pinning, cache poisoning).
+
+```yaml
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: <latest tag SHA>  # frozen: <latest tag>
+    hooks:
+      - id: zizmor
+        args:
+          - --offline
+          - --no-progress
+```
+
+- **`--offline`**: with `GH_TOKEN` or `GITHUB_TOKEN` set, zizmor runs its
+  online audits, and fails without network or on a revoked token. Offline,
+  it needs neither. `args` replaces the hook's own `--no-progress`, hence
+  repeating it.
+- It also audits `.pre-commit-config.yaml` and `.github/dependabot.yaml`.
+- A finding is fixed, never silenced with a `# zizmor: ignore[…]` comment
+  or a `zizmor.yml` rule on the agent's own authority (`ci-conventions`).
 
 ## Never
 
