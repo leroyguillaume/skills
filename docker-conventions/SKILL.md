@@ -81,6 +81,9 @@ description: >-
 - **Keep the runtime lean beyond the base image too:** `--no-install-recommends`
   for apt, `--no-cache` for apk, no `curl`/`wget`/`bash` "just for debugging",
   and health checks that use the app itself rather than an extra binary.
+- **Language packages come from the lockfile** (`npm ci`, `uv sync
+  --locked`, `cargo build --locked`), never `curl … | sh` or an unpinned
+  `pip install`: the install rule is `ci-conventions`'.
 - Follow Linux (FHS) path conventions, with `<appname>` the project name:
   - **Build** in `/usr/local/src/<appname>` (the builder stage `WORKDIR`).
   - **Binary** installed to `/usr/local/bin/` (on `PATH`).

@@ -12,7 +12,8 @@ description: >-
   `actions/deploy-pages` workflow; a Pages deploy fails because Pages is off;
   a repository is or becomes public, or gains a `SECURITY.md`; user asks
   about secret scanning, push protection, Dependabot alerts or security
-  updates, or private vulnerability reporting.
+  updates, private vulnerability reporting, CodeQL or code scanning, or
+  webhook secrets.
   SKIP when: workflow YAML with no repo setting involved
   (`github-actions-conventions`).
 ---
@@ -274,15 +275,16 @@ Notes:
 ## Turn on a public repository's security features
 
 Every **public** repository has these on: secret scanning with push
-protection, Dependabot vulnerability alerts, and private vulnerability
+protection, Dependabot vulnerability alerts, private vulnerability
 reporting, which the reporting link of its `SECURITY.md`
-(`security-policy-conventions`) points at. They are free on a public
-repository. Turn them on as soon as a repository is public, or when one is
-found off.
+(`security-policy-conventions`) points at, and CodeQL code scanning. They
+are free on a public repository. Turn them on as soon as a repository is
+public, or when one is found off.
 
-Check the visibility first. On a private repository secret scanning needs a
-paid GitHub Advanced Security licence and private vulnerability reporting
-does not exist; say so rather than making the repository public.
+Check the visibility first. On a private repository secret scanning and code
+scanning need a paid GitHub Advanced Security licence and private
+vulnerability reporting does not exist; say so rather than making the
+repository public.
 
 ```bash
 gh api repos/{owner}/{repo} --jq '{visibility, security_and_analysis}'
@@ -315,9 +317,19 @@ Private vulnerability reporting:
 gh api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting
 ```
 
+CodeQL code scanning in default setup, the repository's static analysis for
+security (Scorecard's SAST check): GitHub picks the languages it supports,
+the workflows included, and analyses pull requests, pushes to the default
+branch and a weekly run, with no workflow file to pin or bump. It answers
+`202` while the first analysis starts:
+
+```bash
+gh api -X PATCH repos/{owner}/{repo}/code-scanning/default-setup -f state=configured
+```
+
 Verify: both `status` fields read `enabled`, the alerts call succeeds (it
-answers 404 when they are off), security updates read `false` and private
-vulnerability reporting `true`.
+answers 404 when they are off), security updates read `false`, private
+vulnerability reporting `true`, and code scanning `configured`.
 
 ```bash
 gh api repos/{owner}/{repo} --jq .security_and_analysis
@@ -335,6 +347,10 @@ gh api repos/{owner}/{repo}/automated-security-fixes --jq .enabled
 gh api repos/{owner}/{repo}/private-vulnerability-reporting --jq .enabled
 ```
 
+```bash
+gh api repos/{owner}/{repo}/code-scanning/default-setup --jq '{state, languages}'
+```
+
 Notes:
 
 - Every call is idempotent: re-running it where the feature is already on
@@ -342,3 +358,21 @@ Notes:
 - Turning one of these off is the user's decision, never the fix for a
   blocked push or a noisy alert: a push that push protection blocks holds a
   secret, and the secret is what gets fixed.
+- CodeQL stays out of the ruleset's required checks: its analysis outlasts
+  the CI jobs. Its alerts are fixed at the source like any scanner's
+  (`ci-conventions`), never dismissed to clear them.
+
+## Webhooks carry a secret
+
+A repository webhook has a `secret`, so its receiver can check the
+`X-Hub-Signature-256` header and reject a forged delivery (Scorecard's
+Webhooks check). List whether each hook has one; this prints a boolean,
+never the value:
+
+```bash
+gh api repos/{owner}/{repo}/hooks --jq '.[] | {id, url: .config.url, secret: ((.config.secret // "") != "")}'
+```
+
+A hook without one is the user's to fix: the receiving service must know
+the secret, and it is passed by reference, never written in a command
+line.

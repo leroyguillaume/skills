@@ -93,7 +93,9 @@ reporter credited unless they prefer otherwise.
 
 **No response time unless the user gives one.** An invented SLA is a promise
 the maintainer did not make; without one, say that reports are handled on a
-best-effort basis.
+best-effort basis. The OpenSSF Best Practices badge (`openssf-conventions`)
+requires a first response within 14 days: when the project applies for it,
+ask the user whether they commit to that, and state it if they do.
 
 ## Never
 

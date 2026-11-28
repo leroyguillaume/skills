@@ -152,6 +152,11 @@ parent merges, so the issue still closes.
 - **The title follows the repo's commit-subject style** (read
   `git log --oneline`): a squash merge makes it the commit subject on the
   default branch.
+- **A fix for a publicly known vulnerability names its ID in the title**
+  (`CVE-YYYY-NNNNN`, or the `GHSA-…` ID when there is no CVE): the title is
+  the release-notes line users read to decide whether to upgrade. It lands
+  in the notes' security section: the `security` label on GitHub
+  (`github-pr-conventions`), `Changelog: security` on GitLab.
 - **On GitLab, carry the `Changelog:` trailer** when the project's release
   notes read it (`gitlab-ci-conventions`): with squash merges, it goes in the
   MR's squash commit message, or the release notes miss the change.

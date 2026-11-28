@@ -5,8 +5,9 @@ description: >-
   Releases, Pages.
   TRIGGER when: editing anything under `.github/workflows/` or
   `.github/actions/`, `.github/release.yaml`, or an `action.yaml`/`.yml`;
-  setting up CI on GitHub; user asks about Actions, runners, SARIF, GitHub
-  Releases, Pages, OpenSSF Scorecard or the coverage report.
+  setting up CI on GitHub; user asks about Actions, runners, SARIF, script
+  injection or `pull_request_target`, GitHub Releases, Pages, the OpenSSF
+  Scorecard workflow or the coverage report.
   SKIP when: the repo is not on GitHub (`gitlab-ci-conventions`). Load
   `ci-conventions` alongside.
 ---
@@ -62,6 +63,31 @@ that calls it, never widen it. The `release` job that runs `uses:
 ./.github/workflows/build.yaml` therefore grants `packages: write` itself;
 without it the push is denied however `build.yaml` declares its own
 permissions.
+
+## Untrusted input
+
+A workflow that runs code or text an outsider controls hands them the
+repository's token and secrets (Scorecard's Dangerous-Workflow check).
+
+- **No `${{ }}` inside a `run:` script**, nor in `actions/github-script`'s
+  `script:`. The expression is pasted into the script before the shell
+  parses it, so a pull request title or branch name holding `"; curl … | sh`
+  runs as code. Pass the value through the step's `env:` and quote the
+  variable:
+  ```yaml
+      - name: print the pull request title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$TITLE"
+  ```
+- **No `pull_request_target` trigger**, and no `workflow_run` workflow that
+  checks out or runs the triggering pull request's code. Both run a fork's
+  code with the base repository's secrets and a write token. `pull_request`
+  gives a fork read-only access and no secrets, which is all CI needs.
+- **`persist-credentials: false` on every `actions/checkout`.** Otherwise
+  the token stays in `.git/config` for every later step, and in any artifact
+  that uploads the workspace. `gh` reads `GH_TOKEN` from the step's `env`,
+  so no job needs git's stored credentials.
 
 ## Triggers per workflow
 
@@ -388,6 +414,8 @@ The `actionlint` pre-commit hook, always, on a repo with workflows.
 
 - Never start a workflow file with `---`, and never quote `"on"`.
 - Never use a bare branch/tag action ref.
+- Never put `${{ }}` in a `run:` script, and never trigger on
+  `pull_request_target`.
 - Never make a `paths`-filtered workflow, or `coverage`, a required check.
 - Never share one unscoped `type=gha` cache across architectures.
 - Never use `${{ github.workflow }}` in the concurrency group of a reusable

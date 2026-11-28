@@ -20,10 +20,15 @@ its *why* in one line, no more — and in English (`documentation-conventions`).
 
 ## Mandatory structure
 
+The opening names the issue tracker, by URL, as the place for bug reports
+and feature requests, and sends a vulnerability to `SECURITY.md` instead
+when the repository has one (`security-policy-conventions`): a reporter
+reads the top of this file, not its last section.
+
 ```markdown
 # Contributing
 
-<One or two sentences: how to reach the maintainers, and the short version.>
+<One or two sentences: where bug reports and feature requests go, and the short version.>
 
 ## Development setup
 

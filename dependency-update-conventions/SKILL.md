@@ -260,7 +260,9 @@ Baseline:
 - **The baseline sets no label.** When the repo has `.github/release.yaml`,
   add `"labels": ["<changelog-category label>"]` so bot PRs land in the
   right release-notes section — see `github-pr-conventions`, and read the
-  repo's actual labels rather than inventing one. Without that file, set no
+  repo's actual labels rather than inventing one. With a `security`
+  category, `"vulnerabilityAlerts": {"labels": ["security"]}` files the CVE
+  fixes there, as the release notes must. Without that file, set no
   category label. **Renovate applies no label** unless `labels` is set;
   relabelling a bot PR by hand is lost on the next one, so fix the config.
 - **Match the repository's commit style**, read from `git log --oneline`
