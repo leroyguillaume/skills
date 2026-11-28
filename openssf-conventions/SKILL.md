@@ -112,7 +112,8 @@ and a `<criterion>_justification` naming the file that proves it, by URL.
 - The criteria's non-obvious homes: `release_notes_vulns` is
   `pr-conventions` and `dependency-update-conventions`, `report_process` is
   `contributing-conventions`, `vulnerability_report_response` is
-  `security-policy-conventions`, and `static_analysis` is met by the linters
+  `security-policy-conventions`, the `crypto_*` criteria are
+  `cryptography-conventions`, and `static_analysis` is met by the linters
   in `pre-commit` plus CodeQL (`github-repo-settings`).
 
 ### The badge in the README
