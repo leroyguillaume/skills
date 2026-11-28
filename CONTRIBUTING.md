@@ -36,10 +36,9 @@ their checksums in [mise.lock](mise.lock):
 - [Task](https://taskfile.dev) runs the commands below, defined in
   [Taskfile.yml](Taskfile.yml); `task --list` shows them.
 
-pre-commit builds the `actionlint` hook from source with the Go on `PATH`, and
-downloads a toolchain of its own when there is none. It installs the
-`renovate-config-validator` hook from npm the same way, with the Node on
-`PATH` or one it downloads.
+pre-commit installs the `renovate-config-validator` hook from npm, with the
+Node on `PATH` or one it downloads, and the `zizmor` hook from its PyPI
+wheel, with the Python mise installs.
 
 From a fresh clone:
 
@@ -166,7 +165,7 @@ most are formatters or checks that name the file to fix. These need more:
 | Hook | What it checks | How to fix |
 | --- | --- | --- |
 | `yamllint` | YAML style, per [.yamllint.yaml](.yamllint.yaml), with `--strict` so warning-level rules fail too | Fix the finding; block style only, no `---` opening a file |
-| `actionlint` | Workflow files are valid | Fix the expression or key it names |
+| `zizmor` | Workflow files match GitHub's schema, and their security: untrusted input in scripts, persisted checkout credentials, caches read by a publishing run, over-wide permissions. Runs with `--offline`, so it needs no token and no network, even with `GH_TOKEN` set | Follow the remediation its finding links to. Never add a `# zizmor: ignore[…]` comment or a `zizmor.yml` rule on your own: an exception is the maintainer's call |
 | `skill-validator` | Skill structure, relative links, content, contamination, with the `skill-validator` mise installs | See [Running the tests](#running-the-tests) |
 | `renovate-config-validator` | `renovate.json` is valid repo config, with `--strict` so a deprecated option that Renovate would only migrate on the fly fails too | `npx --package renovate -- renovate-config-validator --migrate renovate.json` rewrites it into the current form |
 | `mise-fmt` | `mise.toml` is formatted, with the `mise` on `PATH` | Re-run: it rewrites the file |

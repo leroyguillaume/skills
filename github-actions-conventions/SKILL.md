@@ -48,6 +48,9 @@ is `yaml-conventions`.
 - Renovate's `github-actions` manager bumps the SHAs and their tag comments
   together (`dependency-update-conventions`).
 - Never use a bare branch or tag ref (`@v4`, `@main`, `@stable`).
+- **A same-repository action or reusable workflow is `uses: $/<path>`**,
+  never `./<path>`: `$/` resolves to the running commit, needs no checkout,
+  and counts as pinned. It is github.com only, not GitHub Enterprise Server.
 
 ## Permissions
 
@@ -60,7 +63,7 @@ publishing (`release-supply-chain-conventions`).
 
 A called workflow can only keep or narrow the `GITHUB_TOKEN` scope of the job
 that calls it, never widen it. The `release` job that runs `uses:
-./.github/workflows/build.yaml` therefore grants `packages: write` itself;
+$/.github/workflows/build.yaml` therefore grants `packages: write` itself;
 without it the push is denied however `build.yaml` declares its own
 permissions.
 
@@ -160,11 +163,15 @@ cache (`rust-cache` with its `save-if`, below):
   the ones that were scanned.
 - Layer cache: `type=gha,scope=<target>-<arch>`. An unscoped `type=gha`
   cache is shared, so the two arch jobs overwrite each other. `cache-from`
-  always; `cache-to` from the default branch only, with `mode=max`, since
-  `mode=min` drops the intermediate stages and with them the `cargo chef
-  cook` layer:
+  unless the run pushes, since a publishing run restores no cache; `cache-to`
+  from the default branch only, with `mode=max`, since `mode=min` drops the
+  intermediate stages and with them the `cargo chef cook` layer. The push
+  build still hits the scan build's layers, which the job's builder keeps:
   ```yaml
-  cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform.arch }}
+  cache-from: >-
+    ${{ !inputs.push
+    && format('type=gha,scope={0}-{1}', matrix.target, matrix.platform.arch)
+    || '' }}
   cache-to: >-
     ${{ github.ref == 'refs/heads/main'
     && format('type=gha,mode=max,scope={0}-{1}', matrix.target, matrix.platform.arch)
@@ -184,6 +191,10 @@ What to cache and who saves it is `ci-conventions`. On GitHub:
 
 - **A run restores its own ref's caches and the default branch's, nothing
   else.** A PR can't read another PR's, and a tag run reads only `main`'s.
+- **A publishing run restores no build cache** (`ci-conventions`).
+  `release` and `chart` set a top-level `cache-mode: none`, which GitHub
+  enforces on every job and on the workflows they call. A manual `build`
+  with `push` escapes that cap, so it drops its `cache-from` itself (above).
 - `Swatinem/rust-cache` with `save-if: ${{ github.ref == 'refs/heads/main' }}`;
   without it every PR saves its own `target/`, hundreds of MB each.
 - The repository has a **10 GB quota with least-recently-used eviction**, and
@@ -408,7 +419,31 @@ concurrency:
 
 ## Lint
 
-The `actionlint` pre-commit hook, always, on a repo with workflows.
+The zizmor pre-commit hook, always, on a repo with workflows. It checks them
+against GitHub's schema and the rules above: untrusted input,
+`persist-credentials`, permissions, pinning, cache poisoning.
+
+```yaml
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: <latest tag SHA>  # frozen: <latest tag>
+    hooks:
+      - id: zizmor
+        args:
+          - --offline
+          - --strict-collection
+          - --no-progress
+```
+
+- **`--offline`**: with `GH_TOKEN` or `GITHUB_TOKEN` set, zizmor runs its
+  online audits, and fails without network or on a revoked token. Offline,
+  it needs neither. `args` replaces the hook's own `--no-progress`, hence
+  repeating it.
+- **`--strict-collection`**: without it, a workflow that breaks the schema
+  is skipped with a warning and the hook passes.
+- No `actionlint` beside it: it rejects `$/` and `cache-mode`.
+- It also audits `.pre-commit-config.yaml` and `.github/dependabot.yaml`.
+- A finding is fixed, never silenced with a `# zizmor: ignore[…]` comment
+  or a `zizmor.yml` rule on the agent's own authority (`ci-conventions`).
 
 ## Never
 

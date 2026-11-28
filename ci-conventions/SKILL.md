@@ -138,7 +138,8 @@ How to run the vulnerability scans:
   notification that a new `HIGH`/`CRITICAL` CVE exists.
 
 **No self-authorised ignores, for any scanner.** Don't add a `.trivyignore`
-entry, an inline ignore (`# hadolint ignore=…`, `#trivy:ignore:…`), a
+entry, an inline ignore (`# hadolint ignore=…`, `#trivy:ignore:…`,
+`# zizmor: ignore[…]`), a `zizmor.yml` rule, a
 `--skip-dirs` / `--skip-files`, or a severity downgrade to get a green run,
 for a CVE and a misconfiguration finding alike. Fix at the source: bump the
 dependency, change the base image, harden the manifest. If an entry is
@@ -250,11 +251,15 @@ clean fetch, and a stale cache is worse than none.
   CPU work.
 - **Skip**: a cache wrapped around a fast download just because you can.
   Measure before adding one. (The Trivy DB is the exception, see above.)
-- **Only the default branch saves.** Every other pipeline — change
-  proposals, tags — restores the default branch's cache and saves nothing. A
-  proposal's cache serves only its own reruns, yet it shares the project's
+- **Only the default branch saves.** Every other pipeline saves nothing,
+  and a change proposal restores the default branch's cache. A proposal's cache serves only its own reruns, yet it shares the project's
   cache quota: a few dependency-bot PRs each saving gigabytes of layers evict
   the one cache every proposal reads, and each pays the export time for it.
+- **A publishing pipeline restores no build cache**: `release`, `chart`
+  and a `build` that pushes start cold. Any job that ran on the default
+  branch could write that cache, and the release would ship what it
+  planted, signed and attested (cache poisoning). A slower release is the
+  price. The Trivy DB cache stays: it feeds the scan, not the artefact.
 - **Measure a cache that doesn't help before tuning it**: hit or miss per
   job, what each run saved, and the quota. The usual causes are eviction
   (quota or inactivity), a default-branch run that never finished saving
