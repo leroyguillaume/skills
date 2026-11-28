@@ -76,7 +76,8 @@ the end of the description. (And when one is drawn there, it is Mermaid — see
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design and the reasoning behind it.
 ```
 
-Badges (CI status, licence, version, OpenSSF Scorecard) go on a single line
+Badges (CI status, licence, version, OpenSSF Scorecard and Best Practices)
+go on a single line
 under the title, or not at all. A wall of badges is decoration, not
 documentation.
 

@@ -6,7 +6,7 @@ description: >-
   TRIGGER when: creating or editing any CI definition (`.github/workflows/`,
   `.gitlab-ci.yml`, `.gitlab/ci/`, …); setting up CI; adding a test suite;
   user asks about triggers, path filters, CVE scanning, test coverage, CI
-  caching or release automation.
+  caching, release automation, or committing a built binary.
   SKIP when: no pipeline is involved. Load `github-actions-conventions` or
   `gitlab-ci-conventions` alongside.
 ---
@@ -220,6 +220,23 @@ by letting stale runs finish.
   (`dependency-update-conventions`). A mutable tag or branch is somebody else's
   deploy key into your pipeline.
 - Tool images are pinned to an exact version tag, never `latest`.
+- **Every install a pipeline, a `Dockerfile` or a script it runs makes is
+  pinned and checked**: from the lockfile (`npm ci`, `uv sync --locked`,
+  `cargo install --locked --version <v>`), through mise with its `mise.lock`
+  (`mise-conventions`), or an exact release whose checksum is verified. Never
+  `curl … | sh`, `npm install`, or `pip install <name>` without a version: what
+  ran is then whatever was served that minute (Scorecard's
+  Pinned-Dependencies).
+
+## The repository holds source, never build output
+
+**No generated executable is committed**: no compiled binary, `.jar`,
+`.pyc`, wheel, archive or minified bundle. Nobody reviews one, nothing proves
+it matches the source, and it bypasses the attested build of the `release`
+pipeline (Scorecard's Binary-Artifacts). CI builds it from source; the
+build directories are in `.gitignore`. Generated *source* that a reviewer
+reads in the diff (a lockfile, generated code, a rendered README) is not
+build output.
 
 ## Cache deliberately
 
@@ -275,4 +292,6 @@ clean fetch, and a stale cache is worse than none.
   publishing pipeline from cancellation.
 - Never create a release page for a pre-release tag, and never start a stable
   release's notes from an rc.
-- Never reference third-party pipeline code by a mutable ref.
+- Never reference third-party pipeline code by a mutable ref, and never
+  install anything unpinned.
+- Never commit a generated executable.
