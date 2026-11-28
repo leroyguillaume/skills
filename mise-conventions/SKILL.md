@@ -82,7 +82,7 @@ uv = "<latest>"
 node = "<latest>"
 
 [env]
-UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
+UV_PYTHON = { value = "{% if tools.python %}{{ tools.python.path }}{% endif %}", tools = true }
 ```
 
 - **Rust**: mise installs rustup when it is missing and sets
@@ -91,7 +91,11 @@ UV_PYTHON = { value = "{{ tools.python.path }}", tools = true }
   is still not the MSRV (`rust-build-conventions`).
 - **Python**: mise installs the interpreter, uv the dependencies
   (`python-conventions`). `UV_PYTHON` points uv at mise's interpreter;
-  without it uv can pick a Python it downloaded itself.
+  without it uv can pick a Python it downloaded itself. Keep the `{% if %}`:
+  `tools` only holds installed tools, so unguarded, `mise env` and any
+  `mise exec` that does not first install python fail, as in a CI job
+  installing only some tools. Guarded, the variable is empty, which uv
+  treats as unset.
 - **Node.js**: a `docs/` site or a front end uses the root `node`; no
   `.nvmrc` beside it.
 - **Container images are the one pin outside mise.** A `Dockerfile` builds
@@ -186,6 +190,17 @@ quality:
     - mise install --locked
     - mise exec -- task lint
 ```
+
+A job that needs only a few of the tools installs only those, so it neither
+waits on the other downloads nor fails when one of them does. Name them as
+`[tools]` does, with every tool the job's commands shell out to:
+
+- **GitHub Actions:** `install_args: <tool> <tool>` on `jdx/mise-action`,
+  which still adds `--locked`.
+- **GitLab CI:** `mise install --locked <tool> <tool>`, with
+  `MISE_EXEC_AUTO_INSTALL: "false"` in the job's `variables:`. By default
+  `mise exec` first installs every missing tool, which undoes the selection.
+  Set it too on a GitHub job that runs `mise exec`.
 
 ## Dependency updates
 
